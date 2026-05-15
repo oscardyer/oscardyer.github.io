@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Primary SEO -->
+<title>Monte Carlo Pi Approximation — Interactive Simulator</title>
+<meta name="description" content="Visualise how the Monte Carlo method approximates π using random sampling. Run up to 100,000 simulations in your browser, see the maths explained, and discover real-world applications across finance, physics, AI, and more.">
+<meta name="keywords" content="Monte Carlo method, Monte Carlo simulation, pi approximation, estimate pi, random sampling, probability, statistics, interactive maths, rejection sampling, Law of Large Numbers">
+<meta name="author" content="Monte Carlo Pi Simulator">
+<link rel="canonical" href="redtrooper71.github.io">
+
+<!-- Open Graph (Facebook, LinkedIn sharing) -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="redtrooper71.github.io">
+<meta property="og:title" content="Monte Carlo Pi Approximation — Interactive Simulator">
+<meta property="og:description" content="Throw random darts at a square and watch π emerge. An interactive, visual explainer of the Monte Carlo method — and its real-world uses in finance, physics, AI, and engineering.">
+<meta property="og:image" content="redtrooper71.github.io">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Monte Carlo Pi Approximation — Interactive Simulator">
+<meta name="twitter:description" content="Throw random darts at a square and watch π emerge. An interactive visual explainer of the Monte Carlo method.">
+<meta name="twitter:image" content="redtrooper71.github.io">
+
+<!-- Structured data: SoftwareApplication (helps Google understand this is an interactive tool) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Monte Carlo Pi Approximation Simulator",
+  "applicationCategory": "EducationalApplication",
+  "operatingSystem": "Any",
+  "description": "An interactive browser-based simulator that uses the Monte Carlo method to approximate the value of π through random sampling and rejection sampling techniques.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "GBP" },
+  "url": "redtrooper71.github.io"
+}
+</script>
+
+<!-- Structured data: FAQPage (can generate rich snippets in search results) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How does the Monte Carlo method approximate pi?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Random points are generated inside a unit square. Each point is tested to see if it falls inside a quarter-circle of radius 1. Because the area of the quarter-circle is π/4, the ratio of points inside to total points converges to π/4. Multiplying by 4 gives the approximation of π."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why does the Monte Carlo estimate of pi improve with more samples?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The Law of Large Numbers guarantees that the sample mean converges to the true mean as the number of trials increases. The error shrinks proportionally to 1/√n, meaning you need 100 times more samples to gain one extra decimal place of accuracy."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What are real-world applications of the Monte Carlo method?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Monte Carlo methods are used in finance for option pricing and risk analysis, in nuclear physics for particle transport simulation, in climate science for uncertainty quantification, in AI for Monte Carlo Tree Search (used in AlphaGo), in drug discovery for molecular simulation, and in engineering for reliability and failure-probability analysis."
+      }
+    }
+  ]
+}
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@200;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0e0c;
+    --bg2: #111710;
+    --bg3: #161d14;
+    --green: #4ade80;
+    --green-dim: #22543d;
+    --green-mid: #16a34a;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --text: #e2f5e8;
+    --text-dim: #4b6b52;
+    --text-mid: #86b891;
+    --border: #1e3024;
+    --border-bright: #2d5040;
+    --grid-color: rgba(74, 222, 128, 0.04);
+    --radius: 6px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    background-image:
+      linear-gradient(var(--grid-color) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+    background-size: 40px 40px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    overflow-x: hidden;
+  }
+
+  .scanline {
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px);
+    z-index: 100;
+  }
+
+  .wrap { max-width: 780px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.25rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .logo-pi {
+    font-size: 3rem;
+    font-weight: 300;
+    color: var(--green);
+    line-height: 1;
+    text-shadow: 0 0 32px rgba(74,222,128,0.35);
+  }
+
+  .logo-text {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 200;
+    font-size: 0.8rem;
+    color: var(--text-mid);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    line-height: 1.5;
+  }
+
+  .logo-sub {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    margin-top: 0.1rem;
+  }
+
+  .sim-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 3rem;
+  }
+
+  .canvas-wrap {
+    position: relative;
+    aspect-ratio: 1;
+    background: var(--bg3);
+    max-height: 420px;
+  }
+
+  canvas { display: block; width: 100%; height: 100%; }
+
+  .progress-bar { height: 2px; background: var(--border); }
+  .progress-fill {
+    height: 100%;
+    background: var(--green);
+    width: 0%;
+    transition: width 0.1s linear;
+    box-shadow: 0 0 6px var(--green);
+  }
+
+  .legend {
+    display: flex;
+    gap: 1.25rem;
+    padding: 0.55rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+
+  .legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+  }
+
+  @media (max-width: 520px) { .controls { grid-template-columns: 1fr; } }
+
+  .slider-wrap { display: flex; flex-direction: column; gap: 0.4rem; }
+
+  .slider-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    padding: 0 1px;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 3px;
+    background: var(--border-bright);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--green);
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(74,222,128,0.5);
+    transition: transform 0.15s;
+  }
+
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+  .n-readout {
+    font-size: 0.7rem;
+    color: var(--green);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .run-btn {
+    padding: 0.6rem 1.4rem;
+    background: transparent;
+    border: 1px solid var(--green-mid);
+    border-radius: var(--radius);
+    color: var(--green);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+  }
+
+  .run-btn:hover { box-shadow: 0 0 16px rgba(74,222,128,0.18); background: rgba(74,222,128,0.05); }
+  .run-btn:active { transform: scale(0.97); }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-top: 1px solid var(--border);
+  }
+
+  @media (max-width: 480px) { .metrics { grid-template-columns: repeat(2, 1fr); } }
+
+  .metric { background: var(--bg2); padding: 0.75rem 1rem; }
+  .metric-label { font-size: 0.6rem; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.3rem; }
+  .metric-value { font-size: 1.1rem; font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; transition: color 0.3s; }
+  .metric-value.highlight { color: var(--green); text-shadow: 0 0 16px rgba(74,222,128,0.25); }
+  .metric-value.warn { color: var(--amber); }
+  .metric-sub { font-size: 0.6rem; color: var(--text-dim); margin-top: 0.2rem; }
+
+  .section { margin-bottom: 3rem; }
+
+  .section-label {
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .prose {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    font-size: 0.92rem;
+    color: var(--text-mid);
+    line-height: 1.8;
+  }
+
+  .prose p { margin-bottom: 1rem; }
+  .prose p:last-child { margin-bottom: 0; }
+  .prose strong { color: var(--text); font-weight: 500; }
+
+  .formula {
+    display: inline-block;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.15rem 0.5rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--green);
+  }
+
+  .app-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-top: 1.25rem;
+  }
+
+  .app-card { background: var(--bg2); padding: 1.1rem 1.25rem; }
+
+  .app-icon { font-size: 1.1rem; margin-bottom: 0.5rem; display: block; }
+
+  .app-title {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: 0.04em;
+    margin-bottom: 0.4rem;
+  }
+
+  .app-desc {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .faq-list { display: flex; flex-direction: column; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+
+  .faq-item { background: var(--bg2); }
+
+  .faq-q {
+    display: block;
+    padding: 0.85rem 1.1rem;
+    font-size: 0.8rem;
+    color: var(--text);
+    cursor: pointer;
+    list-style: none;
+    letter-spacing: 0.02em;
+    transition: background 0.15s;
+  }
+
+  .faq-q::-webkit-details-marker { display: none; }
+  .faq-q::before { content: '+ '; color: var(--green); font-weight: 500; }
+  details[open] .faq-q::before { content: '− '; }
+  .faq-q:hover { background: var(--bg3); }
+
+  .faq-a { padding: 0 1.1rem 0.85rem 1.1rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding-top: 1.25rem;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="scanline"></div>
+<div class="wrap">
+
+  <header>
+    <span class="logo-pi" aria-hidden="true">π</span>
+    <div>
+      <h1 class="logo-text">Monte Carlo Pi Approximation</h1>
+      <p class="logo-sub">Interactive simulator &amp; visual explainer</p>
+    </div>
+  </header>
+
+  <div class="sim-card">
+    <div class="canvas-wrap">
+      <canvas id="mc-canvas" role="img" aria-label="Scatter plot of random points used to estimate pi via Monte Carlo method"></canvas>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#4ade80"></div>inside circle
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#f87171"></div>outside circle
+      </div>
+    </div>
+    <div class="controls">
+      <div class="slider-wrap">
+        <input type="range" id="n-slider" min="0" max="6" step="1" value="3" aria-label="Sample size">
+        <div class="slider-labels">
+          <span>100</span><span>500</span><span>1k</span><span>5k</span><span>10k</span><span>50k</span><span>100k</span>
+        </div>
+      </div>
+      <div class="n-readout" id="n-display">10,000 pts</div>
+      <button class="run-btn" id="run-btn" onclick="startSim()">▶ run</button>
+    </div>
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">π estimate</div>
+        <div class="metric-value highlight" id="m-pi">—</div>
+        <div class="metric-sub">true: 3.14159…</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">error</div>
+        <div class="metric-value" id="m-error">—</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">inside</div>
+        <div class="metric-value" id="m-in">—</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">total</div>
+        <div class="metric-value" id="m-total">—</div>
+      </div>
+    </div>
+  </div>
+
+  <section class="section" aria-labelledby="how-it-works">
+    <h2 class="section-label" id="how-it-works">How it works</h2>
+    <div class="prose">
+      <p>
+        Imagine a unit square with a quarter-circle of radius 1 drawn from its corner. If you throw a dart randomly at the square, the probability it lands inside the quarter-circle equals the area of that quarter-circle divided by the area of the square — that is, <span class="formula">π/4 ÷ 1 = π/4</span>.
+      </p>
+      <p>
+        This simulator throws thousands of random "darts" — each a point <span class="formula">(x, y)</span> where both coordinates are drawn uniformly between 0 and 1. A point falls inside the quarter-circle when <span class="formula">x² + y² ≤ 1</span>. Dividing the count of hits by the total gives an estimate of <span class="formula">π/4</span>. Multiply by 4 and you have your approximation of π.
+      </p>
+      <p>
+        The more points you throw, the closer the estimate converges to the true value. This is the <strong>Law of Large Numbers</strong> in action. The catch is that sampling noise only shrinks as <span class="formula">1/√n</span> — so you need 100× more samples to gain just one extra decimal place of accuracy.
+      </p>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="applications">
+    <h2 class="section-label" id="applications">Other applications of Monte Carlo methods</h2>
+    <div class="prose">
+      <p>
+        The same core idea — use random sampling to approximate something hard to compute exactly — appears across nearly every quantitative field. Once you see it here with π, you'll recognise it everywhere.
+      </p>
+    </div>
+    <div class="app-grid">
+      <div class="app-card">
+        <span class="app-icon">📈</span>
+        <div class="app-title">Finance &amp; risk</div>
+        <div class="app-desc">Banks simulate thousands of possible market paths to price options, stress-test portfolios, and estimate Value at Risk — the potential loss on a bad day.</div>
+      </div>
+      <div class="app-card">
+        <span class="app-icon">⚛️</span>
+        <div class="app-title">Physics &amp; nuclear</div>
+        <div class="app-desc">Particle transport through matter — neutrons, photons, electrons — is modelled by sampling random collision events at each step. The technique was pioneered for exactly this at Los Alamos in the 1940s.</div>
+      </div>
+      <div class="app-card">
+        <span class="app-icon">🌡️</span>
+        <div class="app-title">Climate modelling</div>
+        <div class="app-desc">Climate scientists run large ensembles of slightly perturbed simulations to quantify uncertainty in temperature projections and the likelihood of extreme weather events.</div>
+      </div>
+      <div class="app-card">
+        <span class="app-icon">🤖</span>
+        <div class="app-title">AI &amp; game playing</div>
+        <div class="app-desc">Monte Carlo Tree Search (MCTS) powers game-playing AIs like AlphaGo. It randomly simulates future game states to estimate which moves are most likely to lead to a win.</div>
+      </div>
+      <div class="app-card">
+        <span class="app-icon">🧬</span>
+        <div class="app-title">Drug discovery</div>
+        <div class="app-desc">Researchers simulate how molecules fold and bind to proteins by sampling from the vast space of possible shapes, making an otherwise intractable search computationally feasible.</div>
+      </div>
+      <div class="app-card">
+        <span class="app-icon">🚀</span>
+        <div class="app-title">Engineering &amp; reliability</div>
+        <div class="app-desc">Aerospace engineers propagate uncertainty through design models — varying material tolerances, loads, and manufacturing errors — to estimate the probability of failure.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="faq">
+    <h2 class="section-label" id="faq">Frequently asked questions</h2>
+    <div class="faq-list">
+      <details class="faq-item">
+        <summary class="faq-q">Why is this called the Monte Carlo method?</summary>
+        <div class="faq-a prose"><p>The method was named after the Monte Carlo Casino in Monaco by physicists Stanislaw Ulam and John von Neumann while working on nuclear weapons simulations at Los Alamos in the 1940s. The casino reference reflects the method's reliance on randomness — the same chance that drives roulette wheels and card games.</p></div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">How accurate is the Monte Carlo estimate of pi?</summary>
+        <div class="faq-a prose"><p>Accuracy improves slowly. With 100 samples you might get π ≈ 3.1, with 10,000 samples around 3.14, and with 1,000,000 samples around 3.1416. The error shrinks as 1/√n, so quadrupling the sample count only halves the error. It's a famously inefficient way to compute π precisely, but an excellent illustration of stochastic methods.</p></div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">What is rejection sampling?</summary>
+        <div class="faq-a prose"><p>Rejection sampling is a technique for generating samples from a target distribution by drawing from a simpler distribution and accepting or rejecting each sample based on whether it meets a criterion. In this simulator, the criterion is whether the point lands inside the quarter-circle. Points that don't meet it are "rejected" — counted as outside — and their proportion tells us the area of the region.</p></div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">Can I use this simulator for free?</summary>
+        <div class="faq-a prose"><p>Yes, entirely. The simulator runs in your browser with no sign-up required. All computation happens locally on your device — no data is sent to any server.</p></div>
+      </details>
+    </div>
+  </section>
+
+  <footer>
+    <p>Monte Carlo Pi Simulator · An interactive tool for visualising random sampling and the approximation of π · Free to use in any modern browser</p>
+  </footer>
+
+</div>
+
+<script>
+const SIZES = [100, 500, 1000, 5000, 10000, 50000, 100000];
+let running = false, cancelFlag = false;
+
+const slider   = document.getElementById('n-slider');
+const nDisplay = document.getElementById('n-display');
+const runBtn   = document.getElementById('run-btn');
+const canvas   = document.getElementById('mc-canvas');
+const ctx      = canvas.getContext('2d');
+const progress = document.getElementById('progress');
+
+function setCanvasSize() {
+  const wrap = canvas.parentElement;
+  const w = wrap.clientWidth;
+  const h = Math.min(w, 420);
+  canvas.width = w;
+  canvas.height = h;
+}
+setCanvasSize();
+window.addEventListener('resize', () => { setCanvasSize(); drawBg(); });
+
+slider.addEventListener('input', () => {
+  nDisplay.textContent = SIZES[+slider.value].toLocaleString() + ' pts';
+});
+
+function drawBg() {
+  const W = canvas.width, H = canvas.height;
+  ctx.fillStyle = '#161d14';
+  ctx.fillRect(0, 0, W, H);
+  ctx.beginPath();
+  ctx.arc(0, H, Math.min(W, H), -Math.PI / 2, 0);
+  ctx.strokeStyle = 'rgba(74,222,128,0.2)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+drawBg();
+
+function plotDot(x, y, inside) {
+  const W = canvas.width, H = canvas.height;
+  ctx.fillStyle = inside ? '#4ade80' : '#f87171';
+  ctx.globalAlpha = inside ? 0.72 : 0.5;
+  ctx.fillRect(x * W - 1.5, (1 - y) * H - 1.5, 3, 3);
+  ctx.globalAlpha = 1;
+}
+
+function setMetrics(inside, total) {
+  const pi  = (4 * inside) / total;
+  const err = Math.abs(pi - Math.PI);
+  document.getElementById('m-pi').textContent    = pi.toFixed(5);
+  document.getElementById('m-error').textContent = err.toFixed(5);
+  document.getElementById('m-in').textContent    = inside.toLocaleString();
+  document.getElementById('m-total').textContent = total.toLocaleString();
+  document.getElementById('m-pi').classList.toggle('warn', err > 0.05);
+  return { pi, err };
+}
+
+async function startSim() {
+  if (running) { cancelFlag = true; return; }
+  running = true; cancelFlag = false;
+  runBtn.textContent = '■ stop';
+  progress.style.width = '0%';
+  drawBg();
+
+  const n          = SIZES[+slider.value];
+  const batchSize  = 64;
+  const maxDots    = 18000;
+  const skip       = Math.max(1, Math.floor(n / maxDots));
+  const updateEvery = Math.max(1, Math.floor(n / 300));
+  let inside = 0;
+
+  if (n <= 1000) {
+    for (let i = 0; i < n; i++) {
+      const x = Math.random(), y = Math.random();
+      const hit = x*x + y*y <= 1;
+      if (hit) inside++;
+      plotDot(x, y, hit);
+    }
+    setMetrics(inside, n);
+    progress.style.width = '100%';
+  } else {
+    let i = 0;
+    await new Promise(resolve => {
+      function batch() {
+        if (cancelFlag) { resolve(); return; }
+        const end = Math.min(i + batchSize, n);
+        for (; i < end; i++) {
+          const x = Math.random(), y = Math.random();
+          const hit = x*x + y*y <= 1;
+          if (hit) inside++;
+          if (i % skip === 0) plotDot(x, y, hit);
+        }
+        if (i % updateEvery < batchSize) setMetrics(inside, i);
+        progress.style.width = ((i / n) * 100).toFixed(1) + '%';
+        if (i < n) requestAnimationFrame(batch); else resolve();
+      }
+      requestAnimationFrame(batch);
+    });
+    if (!cancelFlag) { setMetrics(inside, n); progress.style.width = '100%'; }
+  }
+
+  running = false;
+  runBtn.textContent = '▶ run';
+}
+</script>
+</body>
+</html>
